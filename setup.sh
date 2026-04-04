@@ -1,12 +1,11 @@
-setup = """mkdir -p ~/.streamlit/
-echo \"[server]
-headless = true
-port = $PORT
-enableCORS = false
-\" > ~/.streamlit/config.toml
-"""
+with open('../setup.sh', 'w') as f:
+    f.write('mkdir -p ~/.streamlit/\n')
+    f.write('echo "[server]" > ~/.streamlit/config.toml\n')
+    f.write('echo "headless = true" >> ~/.streamlit/config.toml\n')
+    f.write('echo "port = $PORT" >> ~/.streamlit/config.toml\n')
+    f.write('echo "enableCORS = false" >> ~/.streamlit/config.toml\n')
 
-with open('../setup.sh', 'w', encoding='utf-8') as f:
-    f.write(setup)
+print("setup.sh fixed!")
 
-print("setup.sh created!")
+with open('../setup.sh', 'r') as f:
+    print(f.read())
