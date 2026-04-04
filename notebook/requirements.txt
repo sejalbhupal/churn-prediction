@@ -10,4 +10,4 @@ joblib
 with open('../requirements.txt', 'w', encoding='utf-8') as f:
     f.write(requirements)
 
-print("requirements.txt written!")
+print("requirements.txt updated!")
