@@ -1,13 +1,7 @@
-requirements = """pandas
+pandas
 numpy
 scikit-learn
 streamlit
 matplotlib
 seaborn
 joblib
-"""
-
-with open('../requirements.txt', 'w', encoding='utf-8') as f:
-    f.write(requirements)
-
-print("requirements.txt updated!")
