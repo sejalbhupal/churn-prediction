@@ -1,18 +1,17 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-import joblib
-import os
 from sklearn.preprocessing import LabelEncoder, StandardScaler
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
+import os
 
-base_dir = os.path.dirname(os.path.abspath(__file__))
-model_path  = os.path.join(base_dir, "model.pkl")
-scaler_path = os.path.join(base_dir, "scaler.pkl")
-data_path   = os.path.join(base_dir, "..", "data", "WA_Fn-UseC_-Telco-Customer-Churn.csv")
+base_dir  = os.path.dirname(os.path.abspath(__file__))
+data_path = os.path.join(base_dir, "..", "data", "WA_Fn-UseC_-Telco-Customer-Churn.csv")
 
-def train_model():
+@st.cache_resource
+def load_model():
+
     df = pd.read_csv(data_path)
     df["TotalCharges"] = pd.to_numeric(df["TotalCharges"], errors="coerce")
     df = df.dropna().copy()
@@ -24,25 +23,16 @@ def train_model():
     for col in df.columns:
         if df[col].dtype == "object":
             df[col] = le.fit_transform(df[col])
-    X = df.drop("Churn", axis=1)
+    X = df.drop("Churn", axis=1).astype(float)
     y = df["Churn"]
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
     scaler = StandardScaler()
-    X_train = scaler.fit_transform(X_train)
+    X_train_scaled = scaler.fit_transform(X_train)
     rf = RandomForestClassifier(n_estimators=100, random_state=42)
-    rf.fit(X_train, y_train)
-    joblib.dump(rf, model_path)
-    joblib.dump(scaler, scaler_path)
+    rf.fit(X_train_scaled, y_train)
     return rf, scaler
 
-if not os.path.exists(model_path) or os.path.getsize(model_path) < 1000:
-    with st.spinner("Setting up model for first time... please wait"):
-        model, scaler = train_model()
-    st.success("Model ready!")
-    st.rerun()
-else:
-    model  = joblib.load(model_path)
-    scaler = joblib.load(scaler_path)
+model, scaler = load_model()
 
 st.set_page_config(page_title="Customer Churn Predictor", page_icon="📉")
 st.title("Customer Churn Predictor")
