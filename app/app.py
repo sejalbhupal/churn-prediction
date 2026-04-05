@@ -1,11 +1,13 @@
 import streamlit as st
 import pandas as pd
 import joblib
-import matplotlib.pyplot as plt
+import os
 from sklearn.preprocessing import LabelEncoder
 
-model  = joblib.load("model.pkl")
-scaler = joblib.load("scaler.pkl")
+# Fix path to load pkl files from same folder as app.py
+base_dir = os.path.dirname(os.path.abspath(__file__))
+model  = joblib.load(os.path.join(base_dir, "model.pkl"))
+scaler = joblib.load(os.path.join(base_dir, "scaler.pkl"))
 
 st.set_page_config(page_title="Customer Churn Predictor", page_icon="📉")
 st.title("Customer Churn Predictor")
@@ -77,23 +79,3 @@ if st.button("Predict Churn Risk"):
         st.warning("Medium Risk - This customer may churn.")
     else:
         st.success("Low Risk - This customer is unlikely to churn.")
-
-    # Churn probability bar chart
-    st.subheader("Probability Chart")
-    fig, ax = plt.subplots()
-    ax.barh(["Stay", "Churn"], [1 - prob, prob], color=["green", "red"])
-    ax.set_xlim(0, 1)
-    ax.set_xlabel("Probability")
-    st.pyplot(fig)
-
-    # Customer summary
-    st.subheader("Customer Summary")
-    summary = {
-        "Gender": gender, "Senior Citizen": senior_citizen,
-        "Partner": partner, "Dependents": dependents,
-        "Tenure (months)": tenure, "Contract": contract,
-        "Internet Service": internet_service,
-        "Monthly Charges": monthly_charges,
-        "Total Charges": total_charges
-    }
-    st.table(pd.DataFrame(summary, index=["Value"]).T)
