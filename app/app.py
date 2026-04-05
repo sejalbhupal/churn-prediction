@@ -11,7 +11,8 @@ data_path = os.path.join(base_dir, "..", "data", "WA_Fn-UseC_-Telco-Customer-Chu
 
 @st.cache_resource
 def load_model():
-    df = pd.read_csv(data_path)
+    df = pd.read_csv(data_path, dtype_backend="numpy_nullable")
+    df = df.astype({col: "object" for col in df.select_dtypes("string").columns})
     df["TotalCharges"] = pd.to_numeric(df["TotalCharges"], errors="coerce")
     df = df.dropna().copy()
     df = df.drop("customerID", axis=1)
@@ -21,9 +22,10 @@ def load_model():
     le = LabelEncoder()
     for col in df.columns:
         if df[col].dtype == "object":
-            df[col] = le.fit_transform(df[col]).astype(float)
-        else:
-            df[col] = df[col].astype(float)
+            df[col] = le.fit_transform(df[col].astype(str))
+    for col in df.columns:
+        df[col] = pd.to_numeric(df[col], errors="coerce")
+    df = df.dropna().copy()
     X = df.drop("Churn", axis=1)
     y = df["Churn"]
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
@@ -89,9 +91,9 @@ def preprocess_input():
     le = LabelEncoder()
     for col in df.columns:
         if df[col].dtype == "object":
-            df[col] = le.fit_transform(df[col]).astype(float)
-        else:
-            df[col] = df[col].astype(float)
+            df[col] = le.fit_transform(df[col].astype(str))
+    for col in df.columns:
+        df[col] = pd.to_numeric(df[col], errors="coerce")
     return scaler.transform(df)
 
 if st.button("Predict Churn Risk"):
