@@ -1,13 +1,48 @@
 import streamlit as st
 import pandas as pd
+import numpy as np
 import joblib
 import os
-from sklearn.preprocessing import LabelEncoder
+from sklearn.preprocessing import LabelEncoder, StandardScaler
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import train_test_split
 
-# Fix path to load pkl files from same folder as app.py
 base_dir = os.path.dirname(os.path.abspath(__file__))
-model  = joblib.load(os.path.join(base_dir, "model.pkl"))
-scaler = joblib.load(os.path.join(base_dir, "scaler.pkl"))
+model_path  = os.path.join(base_dir, "model.pkl")
+scaler_path = os.path.join(base_dir, "scaler.pkl")
+data_path   = os.path.join(base_dir, "..", "data", "WA_Fn-UseC_-Telco-Customer-Churn.csv")
+
+def train_model():
+    df = pd.read_csv(data_path)
+    df["TotalCharges"] = pd.to_numeric(df["TotalCharges"], errors="coerce")
+    df = df.dropna().copy()
+    df = df.drop("customerID", axis=1)
+    df["Churn"] = df["Churn"].map({"Yes": 1, "No": 0})
+    df = df.dropna().copy()
+    df["Churn"] = df["Churn"].astype(int)
+    le = LabelEncoder()
+    for col in df.columns:
+        if df[col].dtype == "object":
+            df[col] = le.fit_transform(df[col])
+    X = df.drop("Churn", axis=1)
+    y = df["Churn"]
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+    scaler = StandardScaler()
+    X_train = scaler.fit_transform(X_train)
+    rf = RandomForestClassifier(n_estimators=100, random_state=42)
+    rf.fit(X_train, y_train)
+    joblib.dump(rf, model_path)
+    joblib.dump(scaler, scaler_path)
+    return rf, scaler
+
+if not os.path.exists(model_path) or os.path.getsize(model_path) < 1000:
+    with st.spinner("Setting up model for first time... please wait"):
+        model, scaler = train_model()
+    st.success("Model ready!")
+    st.rerun()
+else:
+    model  = joblib.load(model_path)
+    scaler = joblib.load(scaler_path)
 
 st.set_page_config(page_title="Customer Churn Predictor", page_icon="📉")
 st.title("Customer Churn Predictor")
@@ -43,7 +78,7 @@ def preprocess_input():
         "SeniorCitizen":    [1 if senior_citizen == "Yes" else 0],
         "Partner":          [partner],
         "Dependents":       [dependents],
-        "tenure":           [tenure],
+        "tenure":           [int(tenure)],
         "PhoneService":     [phone_service],
         "MultipleLines":    [multiple_lines],
         "InternetService":  [internet_service],
@@ -56,23 +91,22 @@ def preprocess_input():
         "Contract":         [contract],
         "PaperlessBilling": [paperless],
         "PaymentMethod":    [payment_method],
-        "MonthlyCharges":   [monthly_charges],
-        "TotalCharges":     [total_charges],
+        "MonthlyCharges":   [float(monthly_charges)],
+        "TotalCharges":     [float(total_charges)],
     }
     df = pd.DataFrame(raw)
     le = LabelEncoder()
     for col in df.columns:
         if df[col].dtype == "object":
             df[col] = le.fit_transform(df[col])
+    df = df.astype(float)
     return scaler.transform(df)
 
 if st.button("Predict Churn Risk"):
     X_input = preprocess_input()
     prob    = model.predict_proba(X_input)[0][1]
-
     st.subheader("Result")
     st.metric("Churn Probability", f"{prob * 100:.1f}%")
-
     if prob > 0.7:
         st.error("High Risk - This customer is very likely to churn.")
     elif prob > 0.4:
